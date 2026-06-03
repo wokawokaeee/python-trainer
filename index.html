@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐍 Python Тренажёр</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d14; --surface: #14141e; --surface2: #1c1c2a; --border: #28283d;
+      --primary: #4B8BBE; --primary-glow: rgba(75,139,190,.18);
+      --accent: #FFE873; --accent-glow: rgba(255,232,115,.12);
+      --success: #00d68f; --success-bg: rgba(0,214,143,.1);
+      --error: #ff4757; --error-bg: rgba(255,71,87,.1);
+      --warn: #ffa502; --text: #e4e4f0; --text-dim: #7878a0;
+      --r: 12px; --r-lg: 20px;
+    }
+    html,body { min-height:100%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+    .app { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+    .screen { display:none; width:100%; max-width:720px; animation:fadeIn .3s ease; }
+    .screen.active { display:block; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); padding:32px; }
+
+    /* ── Welcome ── */
+    .w-logo { font-size:72px; text-align:center; }
+    .w-title { font-size:32px; font-weight:800; text-align:center; background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:8px 0; }
+    .w-sub { text-align:center; color:var(--text-dim); margin-bottom:28px; }
+    .chips { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+    .chip { background:var(--surface2); border:1px solid var(--border); border-radius:100px; padding:6px 14px; font-size:13px; color:var(--text-dim); }
+    .chip b { color:var(--accent); }
+
+    /* ── Buttons ── */
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 24px; border-radius:var(--r); font-size:15px; font-weight:600; cursor:pointer; border:none; transition:all .2s; text-decoration:none; }
+    .btn-primary { background:var(--primary); color:#fff; width:100%; }
+    .btn-primary:hover { background:#5a9fd4; transform:translateY(-1px); box-shadow:0 8px 24px var(--primary-glow); }
+    .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+    .btn-secondary:hover { background:var(--border); }
+    .btn-sm { padding:8px 16px; font-size:13px; border-radius:8px; }
+    .btn-run { background:var(--success); color:#000; }
+    .btn-run:hover { filter:brightness(1.1); }
+    .btn-hint { background:none; border:1px solid var(--border); color:var(--text-dim); padding:7px 14px; border-radius:8px; font-size:13px; cursor:pointer; transition:all .2s; }
+    .btn-hint:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-back { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; gap:6px; padding:0 0 20px; transition:color .2s; }
+    .btn-back:hover { color:var(--text); }
+
+    /* ── Setup ── */
+    .section-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:12px; }
+    .opt-grid { display:grid; gap:10px; margin-bottom:24px; }
+    .cols3 { grid-template-columns:repeat(3,1fr); }
+    .opt-card { background:var(--surface2); border:2px solid var(--border); border-radius:var(--r); padding:16px 12px; cursor:pointer; transition:all .2s; text-align:center; user-select:none; }
+    .opt-card:hover { border-color:var(--primary); background:var(--primary-glow); }
+    .opt-card.selected { border-color:var(--primary); background:var(--primary-glow); box-shadow:0 0 0 1px var(--primary); }
+    .opt-card .oc-icon { font-size:28px; }
+    .opt-card .oc-label { font-weight:700; font-size:15px; margin:4px 0 2px; }
+    .opt-card .oc-desc { font-size:11px; color:var(--text-dim); }
+
+    /* ── Quiz header ── */
+    .q-header { display:flex; align-items:center; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+    .progress-bar { flex:1; height:6px; background:var(--surface2); border-radius:100px; overflow:hidden; min-width:80px; }
+    .progress-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent)); border-radius:100px; transition:width .4s ease; }
+    .score-badge { background:var(--surface2); border:1px solid var(--border); border-radius:100px; padding:5px 14px; font-size:13px; font-weight:700; white-space:nowrap; }
+    .q-counter { color:var(--text-dim); font-size:13px; white-space:nowrap; }
+
+    /* ── Question ── */
+    .q-tag { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--primary); background:var(--primary-glow); border:1px solid rgba(75,139,190,.3); border-radius:6px; padding:3px 9px; margin-bottom:14px; }
+    .q-text { font-size:18px; font-weight:500; margin-bottom:18px; line-height:1.5; }
+    pre.code-block { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:16px; font-family:'JetBrains Mono','Fira Code','Courier New',monospace; font-size:13.5px; line-height:1.7; overflow-x:auto; margin-bottom:18px; color:#cdd6f4; tab-size:4; }
+
+    /* ── Quiz options ── */
+    .quiz-opts { display:grid; gap:9px; }
+    .qopt { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface2); border:2px solid var(--border); border-radius:var(--r); cursor:pointer; transition:all .2s; font-size:14px; }
+    .qopt:hover:not(.dis) { border-color:var(--primary); background:var(--primary-glow); }
+    .qopt .letter { width:28px; height:28px; border-radius:50%; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; transition:all .2s; }
+    .qopt.correct { border-color:var(--success); background:var(--success-bg); }
+    .qopt.correct .letter { background:var(--success); border-color:var(--success); color:#000; }
+    .qopt.wrong { border-color:var(--error); background:var(--error-bg); }
+    .qopt.wrong .letter { background:var(--error); border-color:var(--error); color:#fff; }
+    .qopt.dis { cursor:default; opacity:.55; }
+    .qopt.correct.dis, .qopt.wrong.dis { opacity:1; }
+
+    /* ── Code editor ── */
+    .editor-wrap { border:2px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:14px; transition:border-color .2s; }
+    .editor-wrap:focus-within { border-color:var(--primary); }
+    .editor-head { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:var(--surface2); border-bottom:1px solid var(--border); font-size:11px; color:var(--text-dim); }
+    .dots { display:flex; gap:5px; }
+    .dot { width:9px; height:9px; border-radius:50%; }
+    .CodeMirror { height:auto !important; min-height:110px; font-family:'JetBrains Mono','Fira Code',monospace !important; font-size:13.5px !important; line-height:1.7 !important; }
+    .run-row { display:flex; gap:10px; margin-bottom:12px; align-items:center; }
+    .out-box { background:#08080f; border:1px solid var(--border); border-radius:var(--r); padding:11px 14px; font-family:'JetBrains Mono',monospace; font-size:13px; min-height:42px; color:#a6e3a1; white-space:pre-wrap; word-break:break-all; }
+    .out-box.err { color:var(--error); }
+    .out-box.neutral { color:var(--text-dim); font-style:italic; }
+
+    /* ── Hint ── */
+    .hint-box { background:var(--accent-glow); border:1px solid rgba(255,232,115,.25); border-radius:var(--r); padding:11px 14px; font-size:13px; color:var(--accent); margin-top:10px; display:none; }
+    .hint-box.show { display:block; animation:fadeIn .2s; }
+
+    /* ── Feedback ── */
+    .feedback { border-radius:var(--r); padding:16px 18px; margin-top:18px; display:none; }
+    .feedback.show { display:block; animation:fadeIn .3s; }
+    .feedback.ok { background:var(--success-bg); border:1px solid rgba(0,214,143,.3); }
+    .feedback.fail { background:var(--error-bg); border:1px solid rgba(255,71,87,.3); }
+    .fb-title { font-weight:700; font-size:16px; margin-bottom:5px; }
+    .feedback.ok .fb-title { color:var(--success); }
+    .feedback.fail .fb-title { color:var(--error); }
+    .fb-text { font-size:13.5px; color:var(--text-dim); line-height:1.6; }
+    .fb-text code { background:var(--surface2); padding:1px 5px; border-radius:4px; font-family:monospace; color:var(--accent); font-size:12px; }
+    .next-row { margin-top:18px; display:none; gap:10px; }
+    .next-row.show { display:flex; }
+
+    /* ── Pyodide status ── */
+    .py-status { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim); }
+    .pydot { width:7px; height:7px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+    .pydot.loading { background:var(--accent); animation:pulse 1s infinite; }
+    .pydot.ready { background:var(--success); }
+    .pydot.error { background:var(--error); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Final ── */
+    .final-ring { width:110px; height:110px; border-radius:50%; background:conic-gradient(var(--primary),var(--accent),var(--primary)); display:flex; align-items:center; justify-content:center; margin:0 auto 22px; position:relative; }
+    .final-ring::before { content:''; position:absolute; width:88px; height:88px; border-radius:50%; background:var(--surface); }
+    .final-ring span { position:relative; z-index:1; font-size:30px; font-weight:800; }
+    .final-title { font-size:24px; font-weight:700; text-align:center; margin-bottom:6px; }
+    .final-sub { text-align:center; color:var(--text-dim); margin-bottom:24px; font-size:15px; }
+    .final-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:24px; }
+    .fstat { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:14px; text-align:center; }
+    .fstat .fval { font-size:26px; font-weight:800; color:var(--primary); }
+    .fstat .flbl { font-size:11px; color:var(--text-dim); margin-top:3px; }
+    .grade-bar { height:8px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-bottom:20px; }
+    .grade-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--primary),var(--accent)); transition:width 1s ease; }
+
+    /* ── Misc ── */
+    .divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+    .gap { margin-bottom:20px; }
+    @media(max-width:560px) {
+      .card{padding:18px} .cols3{grid-template-columns:1fr} .final-stats{gap:8px}
+      .w-title{font-size:26px} .q-text{font-size:16px}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════════ WELCOME ═══════════════ -->
+  <div class="screen active" id="s-welcome">
+    <div class="card">
+      <div class="w-logo">🐍</div>
+      <div class="w-title">Python Тренажёр</div>
+      <div class="w-sub">Прокачай знания Python — от основ до продвинутых концепций</div>
+      <div class="chips">
+        <div class="chip">📚 <b>50+</b> вопросов</div>
+        <div class="chip">🎯 <b>3</b> уровня</div>
+        <div class="chip">⚡ Реальный Python</div>
+        <div class="chip">🌐 Работает везде</div>
+      </div>
+      <button class="btn btn-primary" onclick="showScreen('s-setup')">Начать тренировку →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SETUP ═══════════════ -->
+  <div class="screen" id="s-setup">
+    <button class="btn-back" onclick="showScreen('s-welcome')">← Назад</button>
+    <div class="card">
+      <div class="section-label">Уровень сложности</div>
+      <div class="opt-grid cols3">
+        <div class="opt-card" data-group="level" data-val="beginner" onclick="selectOpt(this)">
+          <div class="oc-icon">🌱</div>
+          <div class="oc-label">Новичок</div>
+          <div class="oc-desc">Синтаксис, типы, циклы</div>
+        </div>
+        <div class="opt-card" data-group="level" data-val="intermediate" onclick="selectOpt(this)">
+          <div class="oc-icon">🔥</div>
+          <div class="oc-label">Средний</div>
+          <div class="oc-desc">ООП, итераторы, функции</div>
+        </div>
+        <div class="opt-card" data-group="level" data-val="advanced" onclick="selectOpt(this)">
+          <div class="oc-icon">⚡</div>
+          <div class="oc-label">Продвинутый</div>
+          <div class="oc-desc">Декораторы, генераторы</div>
+        </div>
+      </div>
+
+      <div class="section-label">Формат заданий</div>
+      <div class="opt-grid cols3">
+        <div class="opt-card" data-group="format" data-val="quiz" onclick="selectOpt(this)">
+          <div class="oc-icon">🧠</div>
+          <div class="oc-label">Квиз</div>
+          <div class="oc-desc">Выбери правильный ответ</div>
+        </div>
+        <div class="opt-card" data-group="format" data-val="code" onclick="selectOpt(this)">
+          <div class="oc-icon">✍️</div>
+          <div class="oc-label">Написать код</div>
+          <div class="oc-desc">Реши задачу с нуля</div>
+        </div>
+        <div class="opt-card" data-group="format" data-val="bug" onclick="selectOpt(this)">
+          <div class="oc-icon">🐛</div>
+          <div class="oc-label">Найди баг</div>
+          <div class="oc-desc">Исправь сломанный код</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="start-btn" onclick="startQuiz()" disabled>Выбери уровень и формат</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ QUESTION ═══════════════ -->
+  <div class="screen" id="s-question">
+    <div class="q-header">
+      <button class="btn-back" style="padding:0;margin:0" onclick="if(confirm('Выйти из тренировки?'))showScreen('s-setup')">✕</button>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+      <div class="q-counter" id="q-counter">1 / 10</div>
+      <div class="score-badge">⭐ <span id="score-display">0</span></div>
+    </div>
+
+    <div class="card">
+      <div class="q-tag" id="q-tag">Тема</div>
+      <div class="q-text" id="q-text">Вопрос</div>
+      <pre class="code-block" id="q-code" style="display:none"></pre>
+
+      <!-- Quiz options -->
+      <div class="quiz-opts" id="quiz-opts"></div>
+
+      <!-- Code editor -->
+      <div id="editor-section" style="display:none">
+        <div class="editor-wrap">
+          <div class="editor-head">
+            <div class="dots">
+              <div class="dot" style="background:#ff5f57"></div>
+              <div class="dot" style="background:#febc2e"></div>
+              <div class="dot" style="background:#28c840"></div>
+            </div>
+            <span>Python 3</span>
+            <div class="py-status"><div class="pydot" id="pydot"></div><span id="py-label">Загрузка Python...</span></div>
+          </div>
+          <textarea id="code-editor"></textarea>
+        </div>
+        <div class="run-row">
+          <button class="btn btn-run btn-sm" onclick="runCode()">▶ Запустить</button>
+          <button class="btn-hint" onclick="toggleHint()">💡 Подсказка</button>
+        </div>
+        <div class="out-box neutral" id="out-box">Нажмите «Запустить» чтобы проверить код</div>
+        <div class="hint-box" id="hint-box"></div>
+      </div>
+
+      <div class="feedback" id="feedback">
+        <div class="fb-title" id="fb-title"></div>
+        <div class="fb-text" id="fb-text"></div>
+      </div>
+      <div class="next-row" id="next-row">
+        <button class="btn btn-primary" onclick="nextQuestion()">Следующий →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FINAL ═══════════════ -->
+  <div class="screen" id="s-final">
+    <div class="card">
+      <div class="final-ring"><span id="final-pct">0%</span></div>
+      <div class="final-title" id="final-title">Отлично!</div>
+      <div class="final-sub" id="final-sub">Тренировка завершена</div>
+      <div class="grade-bar"><div class="grade-fill" id="grade-fill" style="width:0%"></div></div>
+      <div class="final-stats">
+        <div class="fstat"><div class="fval" id="fs-correct">0</div><div class="flbl">Правильно</div></div>
+        <div class="fstat"><div class="fval" id="fs-total">0</div><div class="flbl">Вопросов</div></div>
+        <div class="fstat"><div class="fval" id="fs-score">0</div><div class="flbl">Очков</div></div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-primary" onclick="startQuiz()">🔄 Ещё раз</button>
+        <button class="btn btn-secondary" onclick="showScreen('s-setup')" style="flex:1">Изменить настройки</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  QUESTIONS DATABASE
+// ════════════════════════════════════════════
+const QUESTIONS = [
+
+// ─── BEGINNER QUIZ ───
+{level:'beginner',format:'quiz',topic:'Операторы',
+ q:'Что выведет этот код?',
+ code:'print(2 + 3 * 4)',
+ opts:['20','14','24','9'],correct:1,
+ expl:'Умножение выполняется раньше сложения: 3*4=12, 2+12=14'},
+
+{level:'beginner',format:'quiz',topic:'Типы данных',
+ q:'Какой тип данных у переменной x?',
+ code:'x = 3.14',
+ opts:['int','str','float','double'],correct:2,
+ expl:'3.14 — это число с плавающей точкой, тип <code>float</code>'},
+
+{level:'beginner',format:'quiz',topic:'Строки',
+ q:'Что выведет этот код?',
+ code:'print("ha" * 3)',
+ opts:['ha ha ha','ha*3','hahaha','Ошибка'],correct:2,
+ expl:'Оператор * повторяет строку: "ha" * 3 = "hahaha"'},
+
+{level:'beginner',format:'quiz',topic:'Операторы',
+ q:'Чему равно выражение?',
+ code:'print(10 % 3)',
+ opts:['3','3.33','0','1'],correct:3,
+ expl:'% — оператор остатка от деления. 10 = 3*3 + 1, остаток = 1'},
+
+{level:'beginner',format:'quiz',topic:'Списки',
+ q:'Что выведет этот код?',
+ code:'lst = [10, 20, 30, 40]\nprint(lst[-1])',
+ opts:['10','40','30','Ошибка'],correct:1,
+ expl:'Отрицательный индекс -1 даёт последний элемент списка'},
+
+{level:'beginner',format:'quiz',topic:'Булевы',
+ q:'Что выведет этот код?',
+ code:'print(bool(0), bool([]), bool("hello"))',
+ opts:['True True True','False False True','False True False','True False True'],correct:1,
+ expl:'0 и пустой список — "ложные" значения (falsy). Непустая строка — True'},
+
+{level:'beginner',format:'quiz',topic:'Строки',
+ q:'Что выведет этот код?',
+ code:'s = "hello"\nprint(s.upper())',
+ opts:['hello','HELLO','Hello','Ошибка'],correct:1,
+ expl:'Метод .upper() возвращает строку в верхнем регистре'},
+
+{level:'beginner',format:'quiz',topic:'range()',
+ q:'Сколько чисел сгенерирует range(1, 6)?',
+ code:'print(list(range(1, 6)))',
+ opts:['5 чисел: [1,2,3,4,5]','6 чисел: [1,2,3,4,5,6]','4 числа: [2,3,4,5]','6 чисел: [0,1,2,3,4,5]'],correct:0,
+ expl:'range(start, stop) — от start включительно до stop НЕ включительно'},
+
+// ─── BEGINNER CODE ───
+{level:'beginner',format:'code',topic:'Ввод/вывод',
+ q:'Напишите код, который выводит строку <code>Hello, World!</code>',
+ template:'# Ваш код здесь\n',
+ testType:'output', expected:'Hello, World!',
+ hint:'Используйте функцию print()',
+ expl:'Классический первый код на любом языке: print("Hello, World!")'},
+
+{level:'beginner',format:'code',topic:'Циклы',
+ q:'Напишите код, который выводит сумму чисел от 1 до 10 (включительно).\nРезультат выведите через print().',
+ template:'# Подсказка: используйте sum() и range()\n',
+ testType:'output', expected:'55',
+ hint:'sum(range(1, 11)) или цикл for с накоплением',
+ expl:'sum(range(1, 11)) = 55. range(1, 11) даёт числа от 1 до 10'},
+
+{level:'beginner',format:'code',topic:'Функции',
+ q:'Напишите функцию <code>is_even(n)</code>, которая возвращает <code>True</code> если число чётное, иначе <code>False</code>.\n\nПример: is_even(4) → True, is_even(7) → False',
+ template:'def is_even(n):\n    # ваш код\n    pass\n',
+ testType:'function',
+ testCode:`
+assert is_even(4) == True, "is_even(4) должно быть True"
+assert is_even(7) == False, "is_even(7) должно быть False"
+assert is_even(0) == True, "is_even(0) должно быть True"
+assert is_even(-2) == True, "is_even(-2) должно быть True"
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Используйте оператор % (остаток от деления на 2)',
+ expl:'n % 2 == 0 — чётное число. % возвращает остаток от деления'},
+
+{level:'beginner',format:'code',topic:'Строки',
+ q:'Напишите функцию <code>reverse_string(s)</code>, которая возвращает строку в обратном порядке.\n\nПример: reverse_string("hello") → "olleh"',
+ template:'def reverse_string(s):\n    # ваш код\n    pass\n',
+ testType:'function',
+ testCode:`
+assert reverse_string("hello") == "olleh", "Ошибка"
+assert reverse_string("Python") == "nohtyP", "Ошибка"
+assert reverse_string("a") == "a", "Ошибка"
+assert reverse_string("") == "", "Ошибка"
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Используйте срезы: s[::-1]',
+ expl:'s[::-1] — срез с шагом -1 переворачивает строку'},
+
+{level:'beginner',format:'code',topic:'Списки',
+ q:'Напишите функцию <code>count_vowels(s)</code>, которая считает количество гласных (а, е, и, о, у, a, e, i, o, u) в строке.',
+ template:'def count_vowels(s):\n    # ваш код\n    pass\n',
+ testType:'function',
+ testCode:`
+assert count_vowels("hello") == 2, f"hello → 2, получено {count_vowels('hello')}"
+assert count_vowels("Python") == 1, f"Python → 1"
+assert count_vowels("aeiou") == 5, f"aeiou → 5"
+assert count_vowels("xyz") == 0, f"xyz → 0"
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Создайте строку с гласными и проверяйте каждый символ через count или цикл',
+ expl:'vowels = "aeiouаеиоу"; sum(1 for c in s.lower() if c in vowels)'},
+
+// ─── BEGINNER BUG ───
+{level:'beginner',format:'bug',topic:'Синтаксис',
+ q:'В коде есть синтаксическая ошибка. Найди и исправь её.',
+ buggy:`for i in range(5)
+    print(i)`,
+ template:`for i in range(5)
+    print(i)`,
+ testType:'output', expected:'0\n1\n2\n3\n4',
+ hint:'Посмотри внимательно на первую строку цикла',
+ expl:'После for ... in range(): нужно двоеточие! for i in range(5):'},
+
+{level:'beginner',format:'bug',topic:'Индексы',
+ q:'Код падает с ошибкой. Исправь, чтобы он вывел последний элемент списка.',
+ buggy:`lst = [10, 20, 30]
+print(lst[3])`,
+ template:`lst = [10, 20, 30]
+print(lst[3])`,
+ testType:'output', expected:'30',
+ hint:'Индексы списка начинаются с 0. Последний элемент из 3 — какой индекс?',
+ expl:'Список из 3 элементов: индексы 0, 1, 2. lst[3] — ошибка! Используй lst[2] или lst[-1]'},
+
+{level:'beginner',format:'bug',topic:'Типы',
+ q:'Код падает с TypeError. Исправь его, чтобы он вывел <code>У меня 3 кошки</code>',
+ buggy:`count = 3
+print("У меня " + count + " кошки")`,
+ template:`count = 3
+print("У меня " + count + " кошки")`,
+ testType:'output', expected:'У меня 3 кошки',
+ hint:'Нельзя складывать строку и число напрямую. Преобразуй число в строку.',
+ expl:'Используй str(count) или f-строку: f"У меня {count} кошки"'},
+
+{level:'beginner',format:'bug',topic:'Функции',
+ q:'Функция должна вернуть квадрат числа, но что-то пошло не так.',
+ buggy:`def square(n):
+    result = n * n
+
+print(square(5))`,
+ template:`def square(n):
+    result = n * n
+
+print(square(5))`,
+ testType:'output', expected:'25',
+ hint:'Функция вычисляет результат, но не возвращает его',
+ expl:'Нужен оператор return: return n * n. Без него функция возвращает None'},
+
+{level:'beginner',format:'bug',topic:'Условия',
+ q:'Код должен вывести "Чётное" или "Нечётное", но работает неправильно.',
+ buggy:`n = 7
+if n % 2 = 0:
+    print("Чётное")
+else:
+    print("Нечётное")`,
+ template:`n = 7
+if n % 2 = 0:
+    print("Чётное")
+else:
+    print("Нечётное")`,
+ testType:'output', expected:'Нечётное',
+ hint:'Для сравнения используется == а не =',
+ expl:'= это присваивание, == это сравнение. Нужно: if n % 2 == 0:'},
+
+// ─── INTERMEDIATE QUIZ ───
+{level:'intermediate',format:'quiz',topic:'List Comprehension',
+ q:'Что вернёт это выражение?',
+ code:'result = [x**2 for x in range(5)]\nprint(result)',
+ opts:['[1,4,9,16,25]','[0,1,4,9,16]','[0,1,2,3,4]','[1,2,3,4,5]'],correct:1,
+ expl:'range(5) = 0,1,2,3,4. Возводим каждый в квадрат: 0,1,4,9,16'},
+
+{level:'intermediate',format:'quiz',topic:'Словари',
+ q:'Что выведет этот код?',
+ code:'d = {"a": 1, "b": 2}\nprint(d.get("c", 99))',
+ opts:['None','KeyError','0','99'],correct:3,
+ expl:'.get(key, default) возвращает default если ключ не найден. Ключа "c" нет → 99'},
+
+{level:'intermediate',format:'quiz',topic:'Мутабельность',
+ q:'Что выведет этот код? (важный подводный камень!)',
+ code:'x = [1, 2, 3]\ny = x\ny.append(4)\nprint(x)',
+ opts:['[1,2,3]','[1,2,3,4]','[4]','Ошибка'],correct:1,
+ expl:'y = x — это не копия! Обе переменные указывают на один объект. Мутация через y меняет x тоже.'},
+
+{level:'intermediate',format:'quiz',topic:'*args',
+ q:'Что выведет этот код?',
+ code:'def f(*args):\n    print(len(args))\n\nf(1, 2, 3, 4, 5)',
+ opts:['*args','[1,2,3,4,5]','5','Ошибка'],correct:2,
+ expl:'*args собирает все позиционные аргументы в кортеж. len((1,2,3,4,5)) = 5'},
+
+{level:'intermediate',format:'quiz',topic:'enumerate',
+ q:'Что выведет этот код?',
+ code:'fruits = ["яблоко", "груша"]\nfor i, f in enumerate(fruits, start=1):\n    print(i, f)',
+ opts:['0 яблоко\n1 груша','1 яблоко\n2 груша','яблоко груша','Ошибка'],correct:1,
+ expl:'enumerate(iterable, start=1) нумерует элементы начиная с 1'},
+
+{level:'intermediate',format:'quiz',topic:'set',
+ q:'Чему равно выражение?',
+ code:'s = {1, 2, 2, 3, 3, 3}\nprint(len(s))',
+ opts:['6','5','3','Ошибка'],correct:2,
+ expl:'set хранит только уникальные элементы. {1,2,3} — три уникальных значения'},
+
+{level:'intermediate',format:'quiz',topic:'lambda',
+ q:'Что выведет этот код?',
+ code:'double = lambda x: x * 2\nprint(list(map(double, [1, 2, 3])))',
+ opts:['[1,2,3]','[2,4,6]','[double(1),double(2),double(3)]','Ошибка'],correct:1,
+ expl:'map() применяет функцию к каждому элементу. double(1)=2, double(2)=4, double(3)=6'},
+
+{level:'intermediate',format:'quiz',topic:'Исключения',
+ q:'Что выведет этот код?',
+ code:`try:
+    x = int("abc")
+except ValueError:
+    print("Ошибка конвертации")
+except TypeError:
+    print("Ошибка типа")`,
+ opts:['Ошибка типа','Ошибка конвертации','abc','Ничего'],correct:1,
+ expl:'int("abc") вызывает ValueError — нельзя конвертировать "abc" в число'},
+
+// ─── INTERMEDIATE CODE ───
+{level:'intermediate',format:'code',topic:'List Comprehension',
+ q:'Напишите функцию <code>even_squares(n)</code>, которая возвращает список квадратов чётных чисел от 0 до n-1.\n\nПример: even_squares(8) → [0, 4, 16, 36]',
+ template:'def even_squares(n):\n    # используй list comprehension\n    pass\n',
+ testType:'function',
+ testCode:`
+assert even_squares(8) == [0,4,16,36], f"Получено: {even_squares(8)}"
+assert even_squares(2) == [0], f"Получено: {even_squares(2)}"
+assert even_squares(1) == [0], f"Получено: {even_squares(1)}"
+print("✓ Все тесты пройдены!")
+`,
+ hint:'[x**2 for x in range(n) if x % 2 == 0]',
+ expl:'List comprehension с условием: [выражение for переменная in итерируемое if условие]'},
+
+{level:'intermediate',format:'code',topic:'Функции / *args',
+ q:'Напишите функцию <code>my_sum(*args)</code>, которая принимает любое количество чисел и возвращает их сумму.\n\nПример: my_sum(1, 2, 3) → 6, my_sum(10) → 10',
+ template:'def my_sum(*args):\n    pass\n',
+ testType:'function',
+ testCode:`
+assert my_sum(1, 2, 3) == 6
+assert my_sum(10) == 10
+assert my_sum(1, 2, 3, 4, 5) == 15
+assert my_sum() == 0
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Используй sum(args) или цикл. При пустом args должно вернуть 0',
+ expl:'def my_sum(*args): return sum(args). sum([]) = 0 — работает корректно'},
+
+{level:'intermediate',format:'code',topic:'FizzBuzz',
+ q:'Напишите функцию <code>fizzbuzz(n)</code>, которая возвращает список строк от 1 до n:\n• кратное 3 → "Fizz"\n• кратное 5 → "Buzz"\n• кратное 15 → "FizzBuzz"\n• иначе → строку с числом ("1", "2" и т.д.)',
+ template:'def fizzbuzz(n):\n    result = []\n    # ваш код\n    return result\n',
+ testType:'function',
+ testCode:`
+fb = fizzbuzz(15)
+assert fb[0] == "1", f"fb[0]={fb[0]}"
+assert fb[2] == "Fizz", f"fb[2]={fb[2]}"
+assert fb[4] == "Buzz", f"fb[4]={fb[4]}"
+assert fb[14] == "FizzBuzz", f"fb[14]={fb[14]}"
+assert fb[5] == "Fizz", f"fb[5]={fb[5]}"
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Проверяй 15 первым (перед 3 и 5), иначе кратные 15 попадут не туда',
+ expl:'Порядок важен: сначала % 15, потом % 3, потом % 5. Иначе 15 будет "Fizz"'},
+
+{level:'intermediate',format:'code',topic:'Словари',
+ q:'Напишите функцию <code>word_count(text)</code>, которая возвращает словарь с количеством вхождений каждого слова.\n\nПример: word_count("привет мир привет") → {"привет": 2, "мир": 1}',
+ template:'def word_count(text):\n    # ваш код\n    pass\n',
+ testType:'function',
+ testCode:`
+r = word_count("привет мир привет")
+assert r.get("привет") == 2, f"Ожидалось 2, получено {r.get('привет')}"
+assert r.get("мир") == 1, f"Ожидалось 1, получено {r.get('мир')}"
+r2 = word_count("a b a c a b")
+assert r2["a"] == 3 and r2["b"] == 2 and r2["c"] == 1
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Используй .split() для разбивки и dict.get(key, 0) или collections.Counter',
+ expl:'words = text.split(); {w: words.count(w) for w in words} или Counter(words)'},
+
+// ─── INTERMEDIATE BUG ───
+{level:'intermediate',format:'bug',topic:'Мутабельные аргументы',
+ q:'Классический баг в Python. Функция работает неправильно при повторных вызовах.',
+ buggy:`def add_item(item, lst=[]):
+    lst.append(item)
+    return lst
+
+print(add_item("a"))
+print(add_item("b"))`,
+ template:`def add_item(item, lst=[]):
+    lst.append(item)
+    return lst
+
+print(add_item("a"))
+print(add_item("b"))`,
+ testType:'output', expected:"['a']\n['b']",
+ hint:'Изменяемый объект как значение по умолчанию — плохая практика. lst=None по умолчанию, а внутри if lst is None: lst = []',
+ expl:'Значение по умолчанию [] создаётся ОДИН РАЗ. Используй None: def add_item(item, lst=None): if lst is None: lst = []'},
+
+{level:'intermediate',format:'bug',topic:'Итерация',
+ q:'Код должен удалить все нечётные числа из списка, но работает неправильно.',
+ buggy:`nums = [1, 2, 3, 4, 5, 6]
+for n in nums:
+    if n % 2 != 0:
+        nums.remove(n)
+print(nums)`,
+ template:`nums = [1, 2, 3, 4, 5, 6]
+for n in nums:
+    if n % 2 != 0:
+        nums.remove(n)
+print(nums)`,
+ testType:'output', expected:'[2, 4, 6]',
+ hint:'Нельзя изменять список во время итерации. Используй list comprehension или копию.',
+ expl:'Правильно: nums = [n for n in nums if n % 2 == 0]. Или итерируй по nums[:]'},
+
+{level:'intermediate',format:'bug',topic:'Строки',
+ q:'Код должен сделать первую букву каждого слова заглавной, но падает с ошибкой.',
+ buggy:`words = ["привет", "мир", "python"]
+result = []
+for w in words:
+    result.append(w.Capitalize())
+print(result)`,
+ template:`words = ["привет", "мир", "python"]
+result = []
+for w in words:
+    result.append(w.Capitalize())
+print(result)`,
+ testType:'output', expected:"['Привет', 'Мир', 'Python']",
+ hint:'Python чувствителен к регистру в именах методов',
+ expl:'Метод называется .capitalize() (строчные буквы), а не .Capitalize()'},
+
+{level:'intermediate',format:'bug',topic:'Целочисленное деление',
+ q:'Функция должна возвращать среднее значение, но результат неверный.',
+ buggy:`def average(nums):
+    return sum(nums) / 2
+
+print(average([10, 20, 30]))`,
+ template:`def average(nums):
+    return sum(nums) / 2
+
+print(average([10, 20, 30]))`,
+ testType:'output', expected:'20.0',
+ hint:'Среднее = сумма / КОЛИЧЕСТВО элементов, а не сумма / 2',
+ expl:'Нужно делить на len(nums): return sum(nums) / len(nums)'},
+
+// ─── ADVANCED QUIZ ───
+{level:'advanced',format:'quiz',topic:'Декораторы',
+ q:'Что выведет этот код?',
+ code:`def decorator(func):
+    def wrapper(*args, **kwargs):
+        print("До")
+        result = func(*args, **kwargs)
+        print("После")
+        return result
+    return wrapper
+
+@decorator
+def greet():
+    print("Привет!")
+
+greet()`,
+ opts:['Привет!','До\nПривет!\nПосле','До\nПосле\nПривет!','Ошибка'],correct:1,
+ expl:'Декоратор оборачивает функцию. wrapper вызывается вместо greet, печатает "До", вызывает оригинальную функцию, затем "После"'},
+
+{level:'advanced',format:'quiz',topic:'Генераторы',
+ q:'В чём ключевое отличие генератора от обычной функции?',
+ code:`def gen():
+    yield 1
+    yield 2
+    yield 3`,
+ opts:['Генератор быстрее','Генератор возвращает значения по одному (ленивые вычисления)','Генератор может вернуть несколько значений через return','Генераторы — это просто другое название функций'],correct:1,
+ expl:'yield приостанавливает функцию и возвращает значение. Следующий вызов продолжает с того же места. Память экономится — вся последовательность не хранится'},
+
+{level:'advanced',format:'quiz',topic:'Замыкания',
+ q:'Что выведет этот код?',
+ code:`def make_multiplier(n):
+    def multiplier(x):
+        return x * n
+    return multiplier
+
+double = make_multiplier(2)
+triple = make_multiplier(3)
+print(double(5), triple(5))`,
+ opts:['10 15','5 5','25 25','Ошибка'],correct:0,
+ expl:'Замыкание: внутренняя функция "помнит" переменную n из внешней. double запомнила n=2, triple — n=3'},
+
+{level:'advanced',format:'quiz',topic:'is vs ==',
+ q:'Что выведет этот код?',
+ code:`a = [1, 2, 3]
+b = [1, 2, 3]
+c = a
+print(a == b, a is b, a is c)`,
+ opts:['True True True','True False True','False True False','True True False'],correct:1,
+ expl:'== сравнивает значения (True). is сравнивает идентичность объекта (адрес в памяти). a и b — разные объекты с одинаковым содержимым'},
+
+{level:'advanced',format:'quiz',topic:'@classmethod',
+ q:'Что выведет этот код?',
+ code:`class Counter:
+    count = 0
+
+    @classmethod
+    def increment(cls):
+        cls.count += 1
+
+Counter.increment()
+Counter.increment()
+print(Counter.count)`,
+ opts:['0','1','2','Ошибка'],correct:2,
+ expl:'@classmethod получает класс (cls) как первый аргумент. cls.count — это атрибут класса, shared между всеми экземплярами'},
+
+{level:'advanced',format:'quiz',topic:'Контекст-менеджер',
+ q:'Зачем нужен оператор with?',
+ code:`with open("file.txt") as f:
+    data = f.read()`,
+ opts:['Просто синтаксический сахар без пользы','Гарантирует закрытие ресурса даже при исключении','Делает код быстрее','Позволяет читать бинарные файлы'],correct:1,
+ expl:'with вызывает __enter__ при входе и __exit__ при выходе (даже при исключении). Файл всегда будет закрыт'},
+
+{level:'advanced',format:'quiz',topic:'Поверхностная копия',
+ q:'Что выведет этот код?',
+ code:`import copy
+a = [[1, 2], [3, 4]]
+b = copy.copy(a)
+b[0].append(99)
+print(a[0])`,
+ opts:['[1, 2]','[1, 2, 99]','[[1,2,99],[3,4]]','Ошибка'],correct:1,
+ expl:'copy.copy() — поверхностная копия: копирует список, но вложенные объекты остаются shared. b[0] и a[0] — один и тот же объект!'},
+
+{level:'advanced',format:'quiz',topic:'Декораторы',
+ q:'Зачем нужен @functools.wraps(func) в декораторе?',
+ code:`from functools import wraps
+
+def my_dec(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper`,
+ opts:['Ускоряет декоратор','Сохраняет __name__, __doc__ и другие атрибуты оригинальной функции','Обязателен для работы декоратора','Позволяет декоратору принимать аргументы'],correct:1,
+ expl:'Без @wraps wrapper.__name__ == "wrapper". С @wraps — сохраняются метаданные оригинала: имя, docstring и т.д.'},
+
+// ─── ADVANCED CODE ───
+{level:'advanced',format:'code',topic:'Декораторы',
+ q:'Напишите декоратор <code>call_counter</code>, который подсчитывает сколько раз вызвана функция.\n\nПример использования:\n<code>@call_counter\ndef greet(): pass\n\ngreet(); greet(); greet()\nprint(greet.count)  # 3</code>',
+ template:`def call_counter(func):
+    # ваш код
+    pass
+`,
+ testType:'function',
+ testCode:`
+@call_counter
+def greet():
+    pass
+
+greet()
+greet()
+greet()
+assert greet.count == 3, f"Ожидалось 3, получено {greet.count}"
+
+@call_counter
+def add(a, b):
+    return a + b
+
+add(1, 2)
+assert add.count == 1
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Внутри wrapper увеличивай wrapper.count. Инициализируй wrapper.count = 0 до return',
+ expl:`def call_counter(func):
+    def wrapper(*args, **kwargs):
+        wrapper.count += 1
+        return func(*args, **kwargs)
+    wrapper.count = 0
+    return wrapper`},
+
+{level:'advanced',format:'code',topic:'Генераторы',
+ q:'Напишите генератор <code>fibonacci()</code>, который бесконечно генерирует числа Фибоначчи (0, 1, 1, 2, 3, 5, 8, 13, ...).\n\nПример: первые 7 чисел: [0, 1, 1, 2, 3, 5, 8]',
+ template:`def fibonacci():
+    # используй yield
+    pass
+`,
+ testType:'function',
+ testCode:`
+from itertools import islice
+gen = fibonacci()
+result = list(islice(gen, 7))
+assert result == [0, 1, 1, 2, 3, 5, 8], f"Получено: {result}"
+gen2 = fibonacci()
+result2 = list(islice(gen2, 10))
+assert result2 == [0,1,1,2,3,5,8,13,21,34], f"Получено: {result2}"
+print("✓ Все тесты пройдены!")
+`,
+ hint:'a, b = 0, 1; while True: yield a; a, b = b, a + b',
+ expl:'Используй бесконечный while True с yield. a, b = b, a+b — элегантное обновление пары'},
+
+{level:'advanced',format:'code',topic:'Мемоизация',
+ q:'Напишите декоратор <code>memoize</code>, который кэширует результаты вызовов функции.\n\nЕсли функция вызывается с теми же аргументами — вернуть кэшированный результат.',
+ template:`def memoize(func):
+    # ваш код
+    pass
+`,
+ testType:'function',
+ testCode:`
+call_count = 0
+
+@memoize
+def expensive(n):
+    global call_count
+    call_count += 1
+    return n * n
+
+assert expensive(5) == 25
+assert expensive(5) == 25  # из кэша
+assert call_count == 1, f"Функция должна быть вызвана 1 раз, вызвана {call_count}"
+assert expensive(6) == 36
+assert call_count == 2
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Создай словарь cache = {} внутри декоратора. Ключ — args (кортеж аргументов)',
+ expl:`def memoize(func):
+    cache = {}
+    def wrapper(*args):
+        if args not in cache:
+            cache[args] = func(*args)
+        return cache[args]
+    return wrapper`},
+
+{level:'advanced',format:'code',topic:'ООП',
+ q:'Реализуй класс <code>Stack</code> (стек) с методами:\n• <code>push(item)</code> — добавить элемент\n• <code>pop()</code> — убрать и вернуть верхний элемент\n• <code>peek()</code> — посмотреть верхний без удаления\n• <code>is_empty()</code> — True если пустой\n• <code>size()</code> — количество элементов',
+ template:`class Stack:
+    def __init__(self):
+        self._data = []
+
+    def push(self, item):
+        pass
+
+    def pop(self):
+        pass
+
+    def peek(self):
+        pass
+
+    def is_empty(self):
+        pass
+
+    def size(self):
+        pass
+`,
+ testType:'function',
+ testCode:`
+s = Stack()
+assert s.is_empty() == True
+s.push(1); s.push(2); s.push(3)
+assert s.size() == 3
+assert s.peek() == 3
+assert s.pop() == 3
+assert s.size() == 2
+assert s.is_empty() == False
+print("✓ Все тесты пройдены!")
+`,
+ hint:'Стек — LIFO. push → append, pop → list.pop(), peek → list[-1]',
+ expl:'Стек реализуется через список Python. Добавление и удаление — с одного конца (конца списка)'},
+
+// ─── ADVANCED BUG ───
+{level:'advanced',format:'bug',topic:'Замыкания',
+ q:'Код должен создать список функций, каждая умножает на своё число, но все возвращают одно и то же.',
+ buggy:`funcs = []
+for i in range(5):
+    funcs.append(lambda x: x * i)
+
+print(funcs[0](10))  # ожидается 0
+print(funcs[2](10))  # ожидается 20`,
+ template:`funcs = []
+for i in range(5):
+    funcs.append(lambda x: x * i)
+
+print(funcs[0](10))  # ожидается 0
+print(funcs[2](10))  # ожидается 20`,
+ testType:'output', expected:'0\n20',
+ hint:'lambda "запоминает" переменную i по ссылке, а не по значению. Используй default аргумент: lambda x, i=i: x * i',
+ expl:'Классический late binding. lambda x, i=i: x*i "захватывает" текущее значение i при создании'},
+
+{level:'advanced',format:'bug',topic:'Декораторы',
+ q:'Декоратор работает, но "ломает" метаданные функции. Исправь.',
+ buggy:`def logger(func):
+    def wrapper(*args, **kwargs):
+        print(f"Вызов {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
+
+@logger
+def calculate(x, y):
+    """Складывает два числа"""
+    return x + y
+
+print(calculate.__name__)
+print(calculate.__doc__)`,
+ template:`def logger(func):
+    def wrapper(*args, **kwargs):
+        print(f"Вызов {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
+
+@logger
+def calculate(x, y):
+    """Складывает два числа"""
+    return x + y
+
+print(calculate.__name__)
+print(calculate.__doc__)`,
+ testType:'output', expected:'calculate\nСкладывает два числа',
+ hint:'Используй @functools.wraps(func) над wrapper',
+ expl:'from functools import wraps. Добавь @wraps(func) перед def wrapper — сохраняет __name__, __doc__ и т.д.'},
+
+{level:'advanced',format:'bug',topic:'ООП',
+ q:'Атрибут items должен быть отдельным для каждого экземпляра, но все экземпляры делят один список.',
+ buggy:`class Bag:
+    items = []
+
+    def add(self, item):
+        self.items.append(item)
+
+b1 = Bag()
+b2 = Bag()
+b1.add("яблоко")
+print(b2.items)  # должно быть []`,
+ template:`class Bag:
+    items = []
+
+    def add(self, item):
+        self.items.append(item)
+
+b1 = Bag()
+b2 = Bag()
+b1.add("яблоко")
+print(b2.items)  # должно быть []`,
+ testType:'output', expected:'[]',
+ hint:'items = [] — атрибут класса, общий для всех. Перенеси в __init__',
+ expl:'def __init__(self): self.items = [] — теперь каждый экземпляр получает свой список'},
+
+{level:'advanced',format:'bug',topic:'Генераторы',
+ q:'Код должен дважды вывести первые 3 числа генератора, но второй раз ничего не выводит.',
+ buggy:`def gen():
+    yield 1
+    yield 2
+    yield 3
+
+g = gen()
+print(list(g))
+print(list(g))  # должно быть [1, 2, 3]`,
+ template:`def gen():
+    yield 1
+    yield 2
+    yield 3
+
+g = gen()
+print(list(g))
+print(list(g))  # должно быть [1, 2, 3]`,
+ testType:'output', expected:'[1, 2, 3]\n[1, 2, 3]',
+ hint:'Генератор исчерпывается! После первого list(g) генератор пуст. Создай новый.',
+ expl:'Генераторы одноразовые. Нужно создать новый: g2 = gen(); print(list(g2))'},
+
+];
+
+// ════════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════════
+let state = {
+  level: null,
+  format: null,
+  questions: [],
+  idx: 0,
+  score: 0,
+  correct: 0,
+  answered: false,
+};
+
+let pyodide = null;
+let pyodideLoading = false;
+let editor = null;
+
+// ════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function selectOpt(el) {
+  const group = el.dataset.group;
+  document.querySelectorAll(`.opt-card[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  if (group === 'level') state.level = el.dataset.val;
+  else state.format = el.dataset.val;
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const btn = document.getElementById('start-btn');
+  if (state.level && state.format) {
+    btn.disabled = false;
+    btn.textContent = 'Начать →';
+  }
+}
+
+// ════════════════════════════════════════════
+//  QUIZ LOGIC
+// ════════════════════════════════════════════
+function startQuiz() {
+  const pool = QUESTIONS.filter(q => q.level === state.level && q.format === state.format);
+  state.questions = shuffle([...pool]).slice(0, Math.min(pool.length, 10));
+  state.idx = 0; state.score = 0; state.correct = 0; state.answered = false;
+
+  if (state.questions.length === 0) {
+    alert('Вопросы для этой комбинации в разработке!');
+    return;
+  }
+
+  showScreen('s-question');
+
+  if ((state.format === 'code' || state.format === 'bug') && !pyodide && !pyodideLoading) {
+    loadPyodide();
+  }
+
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = state.questions[state.idx];
+  state.answered = false;
+
+  // Header
+  const total = state.questions.length;
+  const pct = (state.idx / total) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('q-counter').textContent = `${state.idx + 1} / ${total}`;
+  document.getElementById('score-display').textContent = state.score;
+
+  // Tag
+  document.getElementById('q-tag').textContent = q.topic;
+
+  // Question text
+  document.getElementById('q-text').innerHTML = q.q;
+
+  // Code block
+  const codeEl = document.getElementById('q-code');
+  if (q.code || (q.format === 'bug' && q.buggy)) {
+    codeEl.textContent = q.code || q.buggy;
+    codeEl.style.display = 'block';
+  } else {
+    codeEl.style.display = 'none';
+  }
+
+  // Hide feedback
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('next-row').className = 'next-row';
+
+  // Show correct section
+  const quizOpts = document.getElementById('quiz-opts');
+  const editorSection = document.getElementById('editor-section');
+
+  if (q.format === 'quiz') {
+    quizOpts.style.display = 'grid';
+    editorSection.style.display = 'none';
+    renderQuizOptions(q);
+  } else {
+    quizOpts.style.display = 'none';
+    editorSection.style.display = 'block';
+    renderEditor(q);
+  }
+}
+
+function renderQuizOptions(q) {
+  const container = document.getElementById('quiz-opts');
+  container.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  q.opts.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'qopt';
+    div.innerHTML = `<div class="letter">${letters[i]}</div><div>${opt}</div>`;
+    div.onclick = () => selectAnswer(i, q, div);
+    container.appendChild(div);
+  });
+}
+
+function selectAnswer(idx, q, el) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const opts = document.querySelectorAll('.qopt');
+  opts.forEach(o => o.classList.add('dis'));
+
+  const isCorrect = idx === q.correct;
+  el.classList.add(isCorrect ? 'correct' : 'wrong');
+  opts[q.correct].classList.add('correct');
+
+  if (isCorrect) { state.correct++; state.score += 10; }
+
+  showFeedback(isCorrect, q.expl);
+}
+
+function renderEditor(q) {
+  const template = q.format === 'bug' ? (q.template || q.buggy) : (q.template || '');
+  document.getElementById('hint-box').textContent = q.hint || '';
+  document.getElementById('hint-box').classList.remove('show');
+  document.getElementById('out-box').className = 'out-box neutral';
+  document.getElementById('out-box').textContent = 'Нажмите «Запустить» чтобы проверить код';
+
+  // Init or update CodeMirror
+  if (!editor) {
+    editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+      mode: 'python',
+      theme: 'dracula',
+      lineNumbers: true,
+      indentUnit: 4,
+      tabSize: 4,
+      indentWithTabs: false,
+      lineWrapping: false,
+      extraKeys: { Tab: cm => cm.replaceSelection('    ') }
+    });
+  }
+  editor.setValue(template);
+  editor.clearHistory();
+  setTimeout(() => editor.refresh(), 50);
+}
+
+function toggleHint() {
+  const box = document.getElementById('hint-box');
+  box.classList.toggle('show');
+}
+
+async function runCode() {
+  const q = state.questions[state.idx];
+  if (state.answered) return;
+
+  const outBox = document.getElementById('out-box');
+  outBox.className = 'out-box neutral';
+  outBox.textContent = '⏳ Выполняется...';
+
+  if (!pyodide) {
+    outBox.textContent = '⚠️ Python ещё загружается, подождите...';
+    return;
+  }
+
+  const userCode = editor.getValue();
+
+  try {
+    let result;
+    if (q.testType === 'output') {
+      result = await runOutputTest(userCode, q.expected);
+    } else {
+      result = await runFunctionTest(userCode, q.testCode);
+    }
+
+    if (result.success) {
+      outBox.className = 'out-box';
+      outBox.textContent = result.output || '✓ Код выполнен';
+      state.answered = true;
+      state.correct++;
+      state.score += 15;
+      showFeedback(true, q.expl);
+    } else {
+      outBox.className = 'out-box err';
+      outBox.textContent = result.error;
+    }
+  } catch (e) {
+    outBox.className = 'out-box err';
+    outBox.textContent = e.toString();
+  }
+}
+
+async function runOutputTest(userCode, expected) {
+  const script = `
+import sys
+from io import StringIO
+_buf = StringIO()
+_saved = sys.stdout
+sys.stdout = _buf
+try:
+    exec(${JSON.stringify(userCode)})
+    _out = _buf.getvalue().strip()
+finally:
+    sys.stdout = _saved
+
+_exp = ${JSON.stringify(expected.trim())}
+assert _out == _exp, f"Ожидалось:\\n{repr(_exp)}\\n\\nПолучено:\\n{repr(_out)}"
+print(_out)
+`;
+  try {
+    await pyodide.runPythonAsync(script);
+    return { success: true, output: '✓ Тест пройден! Вывод: ' + expected };
+  } catch (e) {
+    return { success: false, error: cleanPyError(e.message) };
+  }
+}
+
+async function runFunctionTest(userCode, testCode) {
+  const script = userCode + '\n\n' + testCode;
+  try {
+    const out = await captureOutput(script);
+    return { success: true, output: out };
+  } catch (e) {
+    return { success: false, error: cleanPyError(e.message) };
+  }
+}
+
+async function captureOutput(code) {
+  const wrapper = `
+import sys
+from io import StringIO
+_buf = StringIO()
+_saved = sys.stdout
+sys.stdout = _buf
+try:
+    exec(${JSON.stringify(code)})
+finally:
+    sys.stdout = _saved
+_buf.getvalue()
+`;
+  const result = await pyodide.runPythonAsync(wrapper);
+  return result.trim();
+}
+
+function cleanPyError(msg) {
+  // Show only AssertionError message, not full traceback
+  const lines = msg.split('\n');
+  const assertLine = lines.find(l => l.includes('AssertionError'));
+  if (assertLine) return '✗ Тест не пройден: ' + assertLine.replace('AssertionError:', '').trim();
+  const errLine = lines.find(l => l.match(/^\w+Error:/));
+  if (errLine) return '✗ ' + errLine;
+  return '✗ ' + lines.slice(-2).join('\n');
+}
+
+function showFeedback(correct, explanation) {
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback show ' + (correct ? 'ok' : 'fail');
+  document.getElementById('fb-title').textContent = correct ? '✓ Правильно!' : '✗ Неправильно';
+  document.getElementById('fb-text').innerHTML = explanation || '';
+  document.getElementById('next-row').className = 'next-row show';
+  document.getElementById('score-display').textContent = state.score;
+}
+
+function nextQuestion() {
+  state.idx++;
+  if (state.idx >= state.questions.length) {
+    showFinal();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showFinal() {
+  showScreen('s-final');
+  const total = state.questions.length;
+  const pct = Math.round((state.correct / total) * 100);
+
+  document.getElementById('final-pct').textContent = pct + '%';
+  document.getElementById('fs-correct').textContent = state.correct;
+  document.getElementById('fs-total').textContent = total;
+  document.getElementById('fs-score').textContent = state.score;
+
+  let title, sub;
+  if (pct === 100) { title = '🏆 Идеально!'; sub = 'Ты прошёл без единой ошибки!'; }
+  else if (pct >= 80) { title = '🔥 Отлично!'; sub = 'Отличный результат, почти всё верно!'; }
+  else if (pct >= 60) { title = '👍 Хорошо!'; sub = 'Неплохой результат, есть куда расти'; }
+  else if (pct >= 40) { title = '📚 Учись!'; sub = 'Повтори материал и попробуй снова'; }
+  else { title = '💪 Не сдавайся!'; sub = 'Попробуй уровень ниже или квиз'; }
+
+  document.getElementById('final-title').textContent = title;
+  document.getElementById('final-sub').textContent = sub;
+
+  setTimeout(() => {
+    document.getElementById('grade-fill').style.width = pct + '%';
+  }, 100);
+}
+
+// ════════════════════════════════════════════
+//  PYODIDE
+// ════════════════════════════════════════════
+async function loadPyodide() {
+  pyodideLoading = true;
+  setPyStatus('loading', 'Загрузка Python...');
+
+  try {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+    document.head.appendChild(script);
+    await new Promise((res, rej) => { script.onload = res; script.onerror = rej; });
+
+    pyodide = await window.loadPyodide();
+    setPyStatus('ready', 'Python готов ✓');
+  } catch (e) {
+    setPyStatus('error', 'Ошибка загрузки');
+    console.error(e);
+  }
+  pyodideLoading = false;
+}
+
+function setPyStatus(state, label) {
+  const dot = document.getElementById('pydot');
+  const lbl = document.getElementById('py-label');
+  if (!dot) return;
+  dot.className = 'pydot ' + state;
+  lbl.textContent = label;
+}
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+</script>
+</body>
+</html>
